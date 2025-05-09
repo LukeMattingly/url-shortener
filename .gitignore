@@ -1,2 +1,6 @@
 /venv
 /__pycache__
+// filepath: .gitignore
+*.db
+*.sqlite
+*.sqlite3

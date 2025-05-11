@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Depends
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from datetime import datetime
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, ForeignKey
@@ -40,9 +41,21 @@ def get_db():
 
 app = FastAPI(title="URL Shortener API")
 
-@app.get("/")
-async def root():
-    return {"message": "Welcome to the URL Shortener API"}
+@app.get("/{alias}")
+async def redirectUrl(alias: str, db: Session = Depends(get_db)):
+    """
+    Redirect to the original URL using the shortened URL alias.
+    """
+    print(f"alias: {alias}\n")  
+    if not alias:
+        return {"error": "Alias is required"}
+    
+    db_url = db.query(URL).filter(URL.custom_alias == alias).first()
+    if db_url:
+        return RedirectResponse(url=db_url.original_url, status_code=307)
+    else:
+        raise HTTPException(status_code=404, detail="URL not found")
+
 
 @app.get("/shortenUrl")
 async def shorten_url(
@@ -140,6 +153,7 @@ async def custom_shorten_url(
         "custom_domain": custom_domain,
         "shortened_url": shortened_url,
     }
+
 
 if __name__ == "__main__":
     import uvicorn

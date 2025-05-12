@@ -28,6 +28,16 @@ class URL(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     created_by = Column(Integer, ForeignKey("users.user_id"))
 
+class URLCreateRequest(BaseModel):
+    url: str
+
+class CustomURLCreateRequest(BaseModel):
+    url: str
+    custom_alias: str = None
+    expires_at: str = None
+    custom_domain: str = None
+    user_id: int = None
+
 # Create tables
 Base.metadata.create_all(bind=engine)
 
@@ -57,20 +67,16 @@ async def redirectUrl(alias: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="URL not found")
 
 
-@app.get("/shortenUrl")
+@app.post("/shortenUrl")
 async def shorten_url(
-    # URL query parameters
-    url: str,
-    # Dependencies
-    *,
+    url_request: URLCreateRequest,
     db: Session = Depends(get_db),
-    user_id: int = 1
 ):
     """
     Shorten a URL with an optional custom alias and expiration date and custom domain.
     """
     
-    if not url:
+    if not url_request.url:
         return {"error": "URL is required"}
     
     Counter = db.query(URL).count() + 1
@@ -78,9 +84,10 @@ async def shorten_url(
 
     # Create new URL entry
     db_url = URL(
-        original_url=url,
+        original_url=url_request.url,
         shortened_url=shortened_url,
-        created_by=user_id,
+        created_at=datetime.utcnow(),
+        created_by=None,
         expires_at=None,
         custom_alias=None,
         custom_domain=None
@@ -90,42 +97,36 @@ async def shorten_url(
     db.refresh(db_url)
 
     return {
-        "original_url": url,
+        "original_url": url_request.url,
         "shortened_url": shortened_url,
     }
 
-@app.get("/customShortenUrl")
+@app.post("/customShortenUrl")
 async def custom_shorten_url(
     # URL query parameters
-    url: str, 
-    custom_alias: str, 
-    expires_at: str = None, 
-    custom_domain: str = None,
-    # Dependencies
-    *,
+    url_request: CustomURLCreateRequest, 
     db: Session = Depends(get_db),
-    user_id: int = None
 ):
-    if user_id is None:
+    if url_request.user_id is None:
         return {"error": "User ID is required"}
     
-    if not url:
+    if not url_request.url:
         return {"error": "URL is required"}
 
-    if expires_at:
+    if url_request.expires_at:
         try:
-            datetime.strptime(expires_at, "%Y-%m-%d")
+            datetime.strptime(url_request.expires_at, "%Y-%m-%d")
         except ValueError:
             return {"error": "Invalid expiration date format. Use YYYY-MM-DD."}
         
-        if datetime.strptime(expires_at, "%Y-%m-%d") < datetime.now():
+        if datetime.strptime(url_request.expires_at, "%Y-%m-%d") < datetime.now():
             return {"error": "Expiration date must be in the future."}
         
     base_domain = "http://short.ly"
-    if custom_domain:
-        base_domain = custom_domain
+    if url_request.custom_domain:
+        base_domain = url_request.custom_domain
 
-    shortened_url = f"{base_domain}/{custom_alias}" if custom_alias else f"{base_domain}/{url.split('/')[-1]}"
+    shortened_url = f"{base_domain}/{url_request.custom_alias}" if url_request.custom_alias else f"{base_domain}/{url_request.url.split('/')[-1]}"
 
     # Check if shortened URL already exists
     existing_url = db.query(URL).filter(URL.shortened_url == shortened_url).first()
@@ -134,23 +135,26 @@ async def custom_shorten_url(
 
     # Create new URL entry
     db_url = URL(
-        original_url=url,
+        original_url=url_request.url,
         shortened_url=shortened_url,
-        custom_domain=custom_domain,
-        expires_at=datetime.strptime(expires_at, "%Y-%m-%d") if expires_at else None,
-        custom_alias=custom_alias,
+        custom_domain=url_request.custom_domain,
+        custom_alias=url_request.custom_alias,
+        expires_at=datetime.strptime(url_request.expires_at, "%Y-%m-%d") if url_request.expires_at else None,
         created_at=datetime.utcnow(),
-        created_by=user_id, 
+        created_by=url_request.user_id, 
     )
     db.add(db_url)
     db.commit()
     db.refresh(db_url)
 
     return {
-        "original_url": url,
-        "custom_alias": custom_alias,
-        "expires_at": expires_at,
-        "custom_domain": custom_domain,
+        "original_url": url_request.url,
+        "created_by": url_request.user_id,
+        "created_at": db_url.created_at,
+        "expires_at": db_url.expires_at,
+        "custom_alias": url_request.custom_alias,
+        "expires_at": url_request.expires_at,
+        "custom_domain": url_request.custom_domain,
         "shortened_url": shortened_url,
     }
 

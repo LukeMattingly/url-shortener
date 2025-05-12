@@ -15,9 +15,11 @@ python -m venv venv
 uvicorn main:app --reload
 ```
 
-## Text out shortening a url
+## Test out shortening a url
 
-`http://localhost:8000/customShortenUrl?url=https://walmart.com/123&custom_alias=luke321&expires_at=2026-12-12&custom_domain=shorten.me&user_id=111`
+`curl -X POST http://localhost:8000/shortenUrl -H "Content-Type: application/json" -d "{\"url\": \"https://example.com\"}"`
+
+`curl -X POST http://localhost:8000/customShortenUrl -H "Content-Type: application/json" -d "{\"url\": \"https://walmart.com/123\", \"custom_alias\": \"luke324\", \"expires_at\": \"2026-12-12\", \"custom_domain\": \"shorten.me\", \"user_id\": 111}"`
 
 
 ## Database Setup
@@ -44,12 +46,22 @@ This will:
 If you need to completely reset the database, run the setup script and choose 'yes' when prompted to reset.
 
 # TODO 
-- change from GET to POST for creating new shortened urls
-- add in teh base redirect functionality for when someone calls with a shortened url and you redir them to the correct long url location
+[X] - add in the base redirect functionality for when someone calls with a shortened url and you redir them to the correct long url location
+[X] - change from GET to POST for creating new shortened urls
+
+[ ] do base 62 encoding for url so that it's real, and not just a counter
+
+[ ] move the database to supabase so that I can deploy it
+(keep secrets secret)
+
+[ ] add a UI - sveltkit, simple single page. where you can shorten urls
+[ ] deploy UI and backend
+
+
+---------
+Nice to haves
+
 - add in expires logic
-- add a cache
-    - global counter
-    - probably want to store the urls that are being loaded for redirects too
 
 - allow users to add custom domains (make sure there's no conflict where someone else already owns it)
 - add validation if a custom domain is sent in to make sure that domain belong to that url

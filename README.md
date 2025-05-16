@@ -47,6 +47,7 @@ If you need to completely reset the database, run the setup script and choose 'y
 
 # TODO 
 [X] - add in the base redirect functionality for when someone calls with a shortened url and you redir them to the correct long url location
+
 [X] - change from GET to POST for creating new shortened urls
 
 [ ] do base 62 encoding for url so that it's real, and not just a counter
@@ -55,7 +56,8 @@ If you need to completely reset the database, run the setup script and choose 'y
 (keep secrets secret)
 
 [ ] add a UI - sveltkit, simple single page. where you can shorten urls
-[ ] deploy UI and backend
+
+[ ] setup fly, deploy UI and backend
 
 
 ---------
